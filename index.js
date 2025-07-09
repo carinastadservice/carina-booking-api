@@ -1,33 +1,50 @@
-
-import express from "express";
-import cors from "cors";
-import fs from "fs";
+import express from 'express';
+import fs from 'fs';
+import cors from 'cors';
+import bodyParser from 'body-parser';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-app.post("/api/bookings", (req, res) => {
-  const booking = req.body;
+// Endpoint pentru primirea rezervărilor
+app.post('/api/bookings', (req, res) => {
+  const newBooking = req.body;
 
-  // Încarcă datele existente
-  let bookings = [];
-  if (fs.existsSync("bookings.json")) {
-    const data = fs.readFileSync("bookings.json");
-    bookings = JSON.parse(data);
-  }
+  // Citește fișierul existent
+  fs.readFile('bookings.json', 'utf8', (err, data) => {
+    let bookings = [];
 
-  // Adaugă noua rezervare
-  bookings.push(booking);
+    if (!err && data) {
+      try {
+        bookings = JSON.parse(data);
+      } catch (parseError) {
+        console.error('Eroare la parsarea bookings.json:', parseError);
+        return res.status(500).json({ message: 'Eroare internă la parsare.' });
+      }
+    }
 
-  // Salvează totul din nou
-  fs.writeFileSync("bookings.json", JSON.stringify(bookings, null, 2));
+    // Adaugă noua rezervare
+    bookings.push(newBooking);
 
-  res.status(200).json({ message: "Bokning mottagen." });
+    // Salvează înapoi în fișier
+    fs.writeFile('bookings.json', JSON.stringify(bookings, null, 2), (writeErr) => {
+      if (writeErr) {
+        console.error('Eroare la salvarea rezervării:', writeErr);
+        return res.status(500).json({ message: 'Eroare la salvare.' });
+      }
+
+      console.log('Rezervare salvată:', newBooking);
+      res.status(200).json({ message: 'Rezervare primită.' });
+    });
+  });
 });
 
+// Pornire server
 app.listen(PORT, () => {
-  console.log(`Servern körs på http://localhost:${PORT}`);
+  console.log(`✅ Serverul rulează pe portul ${PORT}`);
 });
+
+
